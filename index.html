@@ -357,4 +357,459 @@ function renderFunds(){
       <div style="color:rgba(240,237,232,0.5);margin-bottom:4px">No funds yet</div>
       <div style="font-size:12px;color:rgba(240,237,232,0.3)">Tap the button below to add your first fund</div>
     </div>
-    <button class="add-btn" onclick="openAddModal()">
+    <button class="add-btn" onclick="openAddModal()">＋ ADD FUND</button>`;
+  }
+  const maxSIP = Math.max(...funds.map(f=>calcSIP(f.sip,f.cagr,10)));
+  let html = funds.map(f=>{
+    const rc=RISK_COLORS[f.risk]||RISK_COLORS.MED;
+    const val10=calcSIP(f.sip,f.cagr,10);
+    const allocPct = totalSIP>0 ? (f.sip/totalSIP*100).toFixed(1) : 0;
+    return `<div class="fund-card" style="--fc:${f.color}">
+      <div class="fc-top">
+        <div class="fc-left">
+          <div class="fc-name-row">
+            <span class="fc-icon">${f.icon}</span>
+            <div>
+              <div class="fc-name">${f.name}</div>
+              <div class="fc-type">${f.type}</div>
+            </div>
+            <span class="fc-tag" style="background:${f.color}22;color:${f.color};border:1px solid ${f.color}44">${f.tag}</span>
+          </div>
+          ${f.notes?`<div style="font-size:11px;color:rgba(240,237,232,0.38);margin-top:3px;font-style:italic">${f.notes}</div>`:''}
+          <div style="color:#7EB8F7;font-size:11px;margin-top:4px">${stars(f.rating||3)}</div>
+        </div>
+        <div class="fc-actions">
+          <button class="btn-edit" onclick="openEditModal(${f.id})" title="Edit">✏️</button>
+          <button class="btn-del" onclick="deleteFund(${f.id})" title="Remove">🗑️</button>
+        </div>
+      </div>
+      <div class="fc-stats">
+        <div class="fc-stat"><div class="sl">SIP/Month</div><div class="sv" style="color:#7EB8F7">₹${f.sip.toLocaleString('en-IN')}</div></div>
+        <div class="fc-stat"><div class="sl">Invested</div><div class="sv" style="color:#4CAF50">₹${(f.invested||0).toLocaleString('en-IN')}</div></div>
+        <div class="fc-stat"><div class="sl">5Y CAGR</div><div class="sv" style="color:#4CAF50">${f.cagr}%</div></div>
+        <div class="fc-stat"><div class="sl">Exp Ratio</div><div class="sv" style="color:${f.er>1?'#FF6B6B':'#4CAF50'}">${f.er}%</div></div>
+      </div>
+      <span class="risk-badge" style="background:${rc.bg};color:${rc.txt}">${f.risk} RISK</span>
+      <div class="alloc-bar">
+        <div class="alloc-bar-lbl"><span>Weight ${allocPct}%</span><span>10yr: ${fmt(val10)}</span></div>
+        <div class="bar-bg"><div class="bar-fill" style="width:${allocPct}%;background:linear-gradient(90deg,${f.color},${f.color}88)"></div></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const totalInvested = funds.reduce((s,f)=>s+(f.invested||0),0);
+  const corpus10 = calcStepUp(totalSIP,blendedCAGR,10);
+  html += `<div class="total-row">
+    <div class="tl">TOTAL PORTFOLIO</div>
+    <div class="total-stats">
+      <div class="ts"><div class="tsl">Monthly SIP</div><div class="tsv">₹${totalSIP.toLocaleString('en-IN')}</div></div>
+      <div class="ts"><div class="tsl">Total Invested</div><div class="tsv">₹${totalInvested.toLocaleString('en-IN')}</div></div>
+      <div class="ts"><div class="tsl">Blended CAGR</div><div class="tsv">${blendedCAGR.toFixed(1)}%</div></div>
+      <div class="ts"><div class="tsl">10-Yr Corpus</div><div class="tsv">${fmt(calcSIP(totalSIP,blendedCAGR,10))}</div></div>
+      <div class="ts"><div class="tsl">With Step-Up</div><div class="tsv">${fmt(corpus10)}</div></div>
+    </div>
+  </div>`;
+
+  html += `<button class="add-btn" onclick="openAddModal()" style="margin-top:10px">＋ ADD NEW FUND</button>`;
+  return html;
+}
+
+// ── PROJECTIONS TAB ───────────────────────────────────────────
+function renderProj(){
+  const {totalSIP,blendedCAGR} = getTotals();
+  const yrs = projYears||10;
+  const corpus = stepUpOn ? calcStepUp(totalSIP,blendedCAGR,yrs) : calcSIP(totalSIP,blendedCAGR,yrs);
+  const invested = stepUpOn
+    ? Array.from({length:yrs},(_,y)=>totalSIP*Math.pow(1.1,y)*12).reduce((a,b)=>a+b,0)
+    : totalSIP*12*yrs;
+  const maxFundVal = Math.max(...funds.map(f=>calcSIP(f.sip,f.cagr,yrs)||0),1);
+
+  const fundBars = funds.map(f=>{
+    const v=calcSIP(f.sip,f.cagr,yrs);
+    return `<div class="lump-item">
+      <div class="lump-top">
+        <div class="lump-name">${f.icon} <span>${f.name}</span> <span class="lump-cagr">₹${f.sip}/mo @ ${f.cagr}%</span></div>
+        <span style="font-size:14px;font-weight:700;color:#4CAF50">${fmt(v)}</span>
+      </div>
+      <div class="bar-bg"><div class="bar-fill" style="width:${(v/maxFundVal*100).toFixed(1)}%;background:linear-gradient(90deg,${f.color},${f.color}88)"></div></div>
+    </div>`;
+  }).join('');
+
+  const milestones = [3,5,7,8,10,12,15].map(y=>`
+    <div class="ms-row ${y===yrs?'hl':''}">
+      <span class="ms-yr">Year ${y} · Age ${22+y}</span>
+      <div class="ms-vals">
+        <div class="mv"><div class="mv-l">Flat SIP</div><div class="mv-n" style="color:#7EB8F7">${fmt(calcSIP(totalSIP,blendedCAGR,y))}</div></div>
+        <div class="mv"><div class="mv-l">Step-Up 10%</div><div class="mv-n" style="color:#4CAF50">${fmt(calcStepUp(totalSIP,blendedCAGR,y))}</div></div>
+      </div>
+    </div>`).join('');
+
+  const stepRows = Array.from({length:Math.min(yrs,12)},(_,y)=>{
+    const mo=Math.round(totalSIP*Math.pow(1.1,y));
+    return `<tr>
+      <td style="color:rgba(240,237,232,0.6)">Year ${y+1}</td>
+      <td style="color:#F0EDE8">Age ${23+y}</td>
+      <td style="color:#7EB8F7">₹${mo.toLocaleString('en-IN')}</td>
+      <td style="color:#4CAF50;font-weight:600">${fmt(calcStepUp(totalSIP,blendedCAGR,y+1))}</td>
+    </tr>`;
+  }).join('');
+
+  return `
+    <div class="section-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <div class="section-title" style="margin:0">Projection Settings</div>
+        <button class="toggle-btn ${stepUpOn?'':'off'}" onclick="toggleStepUp()">
+          ${stepUpOn?'✓ 10% Step-Up':'Step-Up OFF'}
+        </button>
+      </div>
+      <div class="ig">
+        <label class="ig-label">Number of years to project</label>
+        <div class="input-wrap">
+          <span class="input-pre">📅</span>
+          <input class="typed-input" type="number" min="1" max="40" value="${yrs}"
+            oninput="updateProjYears(this.value)" placeholder="10">
+          <span class="input-suf">Years</span>
+        </div>
+        <div class="ig-hint">Type any number — e.g. 5, 10, 20, 30</div>
+      </div>
+    </div>
+
+    <div class="result-box" style="margin-bottom:12px">
+      <div class="result-lbl">Projected Corpus in ${yrs} Years</div>
+      <div class="result-val">${fmt(corpus)}</div>
+      <div class="result-sub">Total invested: ${fmt(invested)} → Gains: ${fmt(Math.max(corpus-invested,0))}</div>
+      <div class="result-sub2" style="color:#7EB8F7">${stepUpOn?'With 10% annual step-up':'Flat SIP, no step-up'}</div>
+    </div>
+
+    <div style="font-size:12px;color:rgba(240,237,232,0.45);margin-bottom:7px">Each fund's value in ${yrs} years:</div>
+    ${fundBars}
+
+    <div class="ms-wrap">
+      <div class="ms-hdr">Year-by-Year Milestones</div>
+      ${milestones}
+    </div>
+
+    <div class="section-card" style="margin-top:10px;padding:14px">
+      <div class="section-title">📅 Step-Up Schedule (10% every April)</div>
+      <table class="su-table">
+        <thead><tr><th>Year</th><th>Age</th><th>SIP/Month</th><th>Corpus</th></tr></thead>
+        <tbody>${stepRows}</tbody>
+      </table>
+    </div>`;
+}
+
+// ── LUMP SUM TAB ──────────────────────────────────────────────
+function renderLump(){
+  const fund = funds[lumpFund] || funds[0];
+  if(!fund) return `<div class="section-card" style="text-align:center;padding:30px"><div style="color:rgba(240,237,232,0.4)">Add funds first to use Lump Sum calculator</div></div>`;
+
+  const result = calcLump(lumpAmount,fund.cagr,lumpYears);
+  const sorted = [...funds].sort((a,b)=>b.cagr-a.cagr);
+  const best = calcLump(lumpAmount,sorted[0]?.cagr||10,lumpYears);
+
+  const fundOpts = funds.map((f,i)=>`<option value="${i}" ${i===lumpFund?'selected':''}>${f.icon} ${f.name} — ${f.cagr}% CAGR</option>`).join('');
+  const compare = sorted.map(f=>{
+    const v=calcLump(lumpAmount,f.cagr,lumpYears);
+    return `<div class="lump-item">
+      <div class="lump-top">
+        <div class="lump-name">${f.icon} <span>${f.name}</span> <span class="lump-cagr">${f.cagr}%</span></div>
+        <span style="font-size:14px;font-weight:700;color:#4CAF50">${fmt(v)}</span>
+      </div>
+      <div class="bar-bg"><div class="bar-fill" style="width:${(v/best*100).toFixed(1)}%;background:linear-gradient(90deg,${f.color},${f.color}88)"></div></div>
+    </div>`;
+  }).join('');
+
+  return `
+    <div class="section-card">
+      <div class="section-title">💰 Lump Sum Calculator</div>
+      <div class="ig">
+        <label class="ig-label">Select Fund</label>
+        <select style="width:100%;background:rgba(10,31,61,0.8);color:#F0EDE8;border:1px solid rgba(255,255,255,0.07);border-radius:9px;padding:11px 12px;font-size:13px;cursor:pointer;outline:none;font-family:Georgia,serif" onchange="updateLumpFund(this.value)">${fundOpts}</select>
+      </div>
+      <div class="ig">
+        <label class="ig-label">Amount to Invest (₹)</label>
+        <div class="input-wrap">
+          <span class="input-pre">₹</span>
+          <input class="typed-input" type="number" min="100" value="${lumpAmount}"
+            oninput="updateLumpAmt(this.value)" placeholder="50000">
+          <span class="input-suf">.00</span>
+        </div>
+        <div class="ig-hint">Type any amount — e.g. 10000, 50000, 200000</div>
+      </div>
+      <div class="ig">
+        <label class="ig-label">Years to Hold</label>
+        <div class="input-wrap">
+          <span class="input-pre">📅</span>
+          <input class="typed-input" type="number" min="1" max="40" value="${lumpYears}"
+            oninput="updateLumpYears(this.value)" placeholder="10">
+          <span class="input-suf">Years</span>
+        </div>
+        <div class="ig-hint">Type any number from 1 to 40</div>
+      </div>
+      <div class="result-box">
+        <div class="result-lbl">Projected Value</div>
+        <div class="result-val">${fmt(result)}</div>
+        <div class="result-sub">₹${lumpAmount.toLocaleString('en-IN')} grows ${(result/lumpAmount).toFixed(1)}× in ${lumpYears} years</div>
+        <div class="result-sub2" style="color:#7EB8F7">Gain: ${fmt(result-lumpAmount)} · ${fund.name}</div>
+      </div>
+    </div>
+    <div style="font-size:12px;color:rgba(240,237,232,0.4);margin-bottom:7px">Same ₹${lumpAmount.toLocaleString('en-IN')} across all funds for ${lumpYears} years:</div>
+    ${compare}`;
+}
+
+// ── RISK TAB ──────────────────────────────────────────────────
+function renderRisk(){
+  const {totalSIP} = getTotals();
+  const stable = funds.filter(f=>f.risk==='LOW'||f.risk==='LOW-MED').reduce((s,f)=>s+f.sip,0);
+  const growth = funds.filter(f=>f.risk==='MED').reduce((s,f)=>s+f.sip,0);
+  const high = funds.filter(f=>f.risk==='HIGH').reduce((s,f)=>s+f.sip,0);
+  const sp = totalSIP>0;
+
+  const cards = funds.map(f=>{
+    const rc=RISK_COLORS[f.risk]||RISK_COLORS.MED;
+    const impact=(Math.abs(f.worstDrop||0)*f.sip/(totalSIP||1)).toFixed(1);
+    const rw=(f.riskScore||3)/5*100;
+    const rcol=f.riskScore<=2?'#1A6B3C':f.riskScore===3?'#5B9BD5':'#B22222';
+    return `<div class="risk-card" style="--rc:${f.color}">
+      <div class="rc-top">
+        <div style="display:flex;align-items:center;gap:7px">
+          <span style="font-size:17px">${f.icon}</span>
+          <span style="font-weight:700;font-size:13px">${f.name}</span>
+        </div>
+        <span class="risk-badge" style="background:${rc.bg};color:${rc.txt}">${f.risk}</span>
+      </div>
+      <div class="risk-stats">
+        <div class="rst"><div class="rsl">Allocation</div><div class="rsv" style="color:#7EB8F7">${sp?(f.sip/totalSIP*100).toFixed(0):0}%</div></div>
+        <div class="rst"><div class="rsl">5Y CAGR</div><div class="rsv" style="color:#4CAF50">${f.cagr}%</div></div>
+        <div class="rst"><div class="rsl">Exp Ratio</div><div class="rsv" style="color:${f.er>1?'#FF6B6B':'#4CAF50'}">${f.er}%</div></div>
+        <div class="rst"><div class="rsl">Worst Drop</div><div class="rsv" style="color:#FF6B6B">${f.worstDrop||0}%</div></div>
+        <div class="rst"><div class="rsl">Recovery</div><div class="rsv" style="color:#7EB8F7;font-size:11px">${f.recovery||'—'}</div></div>
+        <div class="rst"><div class="rsl">Portfolio Hit</div><div class="rsv" style="color:rgba(240,237,232,0.7)">${impact}%</div></div>
+      </div>
+      <div style="margin-top:9px">
+        <div style="font-size:9px;color:rgba(240,237,232,0.28);margin-bottom:3px">Risk Level</div>
+        <div class="bar-bg"><div class="bar-fill" style="width:${rw}%;background:${rcol}"></div></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `
+    <div class="risk-sum">
+      <div class="section-title" style="margin-bottom:4px">Portfolio Risk Composition</div>
+      <div class="risk-grid3">
+        <div class="ri"><div class="rv" style="color:#1A6B3C">${sp?(stable/totalSIP*100).toFixed(0):0}%</div><div class="rl">Stable Core</div><div class="rs">LOW + LOW-MED</div></div>
+        <div class="ri"><div class="rv" style="color:#7EB8F7">${sp?(growth/totalSIP*100).toFixed(0):0}%</div><div class="rl">Growth</div><div class="rs">MED risk funds</div></div>
+        <div class="ri"><div class="rv" style="color:#B22222">${sp?(high/totalSIP*100).toFixed(0):0}%</div><div class="rl">High Growth</div><div class="rs">HIGH risk funds</div></div>
+      </div>
+    </div>
+    ${cards}
+    <div class="insight">
+      <div class="insight-t" style="color:#7EB8F7">⚡ Key Risk Insight</div>
+      <div class="insight-b">Your 50% stable core (Parag Parikh + S&P 500) absorbs market crashes. Even if your small cap falls 55%, it only hits your portfolio by ~3.85% (7% × 55%). Gold rises during crashes, offsetting more. Real worst-case drop: ~18–22%.</div>
+    </div>`;
+}
+
+// ── MODAL: ADD / EDIT ─────────────────────────────────────────
+function openAddModal(){
+  editingId=null; selectedIcon='📈';
+  document.getElementById('modalTitle').textContent='Add New Fund';
+  document.getElementById('modalBody').innerHTML=fundForm(null);
+  document.getElementById('modal').style.display='flex';
+}
+function openEditModal(id){
+  editingId=id;
+  const f=funds.find(x=>x.id===id);
+  if(!f) return;
+  selectedIcon=f.icon;
+  document.getElementById('modalTitle').textContent='Edit Fund';
+  document.getElementById('modalBody').innerHTML=fundForm(f);
+  document.getElementById('modal').style.display='flex';
+}
+function closeModal(){ document.getElementById('modal').style.display='none'; }
+function closeModalOutside(e){ if(e.target.id==='modal') closeModal(); }
+
+function fundForm(f){
+  const iconGrid = ICONS.map(ic=>`<div class="icon-opt ${ic===selectedIcon?'selected':''}" onclick="selectIcon('${ic}')" id="ico_${ic}">${ic}</div>`).join('');
+  const riskSel = RISK_OPTS.map(r=>`<option value="${r}" ${f&&f.risk===r?'selected':''}>${r}</option>`).join('');
+  return `
+    <div class="form-group">
+      <label class="form-label">Fund / Stock Name</label>
+      <div class="input-wrap">
+        <span class="input-pre">📌</span>
+        <input class="typed-input" type="text" id="f_name" placeholder="e.g. Axis Bluechip Fund" value="${f?f.name:''}" style="text-align:left;font-size:14px;font-weight:400;border-left:none;border-right:1px solid rgba(91,155,213,0.3)">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Type / Category</label>
+      <div class="input-wrap">
+        <span class="input-pre">🏷️</span>
+        <input class="typed-input" type="text" id="f_type" placeholder="e.g. Large Cap, ETF, Stock" value="${f?f.type:''}" style="text-align:left;font-size:14px;font-weight:400;border-left:none;border-right:1px solid rgba(91,155,213,0.3)">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Monthly SIP Amount (₹)</label>
+      <div class="input-wrap">
+        <span class="input-pre">₹</span>
+        <input class="typed-input" type="number" id="f_sip" min="100" placeholder="e.g. 2000" value="${f?f.sip:''}">
+        <span class="input-suf">/mo</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Amount Already Invested (₹)</label>
+      <div class="input-wrap">
+        <span class="input-pre">💰</span>
+        <input class="typed-input" type="number" id="f_invested" min="0" placeholder="e.g. 5000" value="${f?(f.invested||0):'0'}">
+        <span class="input-suf">₹</span>
+      </div>
+      <div class="form-hint">Total amount already put in — leave 0 if just starting</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Expected CAGR (%)</label>
+      <div class="input-wrap">
+        <span class="input-pre">📊</span>
+        <input class="typed-input" type="number" id="f_cagr" min="1" max="50" step="0.01" placeholder="e.g. 18.09" value="${f?f.cagr:''}">
+        <span class="input-suf">%</span>
+      </div>
+      <div class="form-hint">Use actual 5Y CAGR from Upstox</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Expense Ratio (%)</label>
+      <div class="input-wrap">
+        <span class="input-pre">💸</span>
+        <input class="typed-input" type="number" id="f_er" min="0" max="5" step="0.01" placeholder="e.g. 0.57" value="${f?f.er:''}">
+        <span class="input-suf">%</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Risk Level</label>
+      <select class="form-select" id="f_risk">${riskSel}</select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Short Label / Tag</label>
+      <div class="input-wrap">
+        <span class="input-pre">🏷️</span>
+        <input class="typed-input" type="text" id="f_tag" placeholder="e.g. ANCHOR, GROWTH" value="${f?f.tag:''}" maxlength="12" style="text-align:left;font-size:14px;font-weight:400;border-left:none;border-right:1px solid rgba(91,155,213,0.3)">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Notes (optional)</label>
+      <div class="input-wrap">
+        <span class="input-pre">📝</span>
+        <input class="typed-input" type="text" id="f_notes" placeholder="e.g. Top-rated, low risk" value="${f?f.notes:''}" style="text-align:left;font-size:13px;font-weight:400;border-left:none;border-right:1px solid rgba(91,155,213,0.3)">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Choose Icon</label>
+      <div class="icon-grid">${iconGrid}</div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-save" onclick="saveFund()">💾 Save Fund</button>
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+    </div>`;
+}
+
+function selectIcon(ic){
+  selectedIcon=ic;
+  document.querySelectorAll('.icon-opt').forEach(el=>el.classList.remove('selected'));
+  const el=document.getElementById('ico_'+ic);
+  if(el) el.classList.add('selected');
+}
+
+function saveFund(){
+  const name=document.getElementById('f_name')?.value?.trim();
+  const type=document.getElementById('f_type')?.value?.trim()||'Fund';
+  const sip=parseFloat(document.getElementById('f_sip')?.value);
+  const invested=parseFloat(document.getElementById('f_invested')?.value)||0;
+  const cagr=parseFloat(document.getElementById('f_cagr')?.value);
+  const er=parseFloat(document.getElementById('f_er')?.value)||0;
+  const risk=document.getElementById('f_risk')?.value||'MED';
+  const tag=document.getElementById('f_tag')?.value?.trim()||'FUND';
+  const notes=document.getElementById('f_notes')?.value?.trim()||'';
+
+  if(!name){alert('Please enter fund name'); return;}
+  if(!sip||sip<1){alert('Please enter a valid SIP amount'); return;}
+  if(!cagr||cagr<0){alert('Please enter a valid CAGR'); return;}
+
+  const riskScore={LOW:1,"LOW-MED":2,MED:3,HIGH:5}[risk]||3;
+  const colorIdx = funds.length % FUND_COLORS.length;
+
+  if(editingId){
+    const idx=funds.findIndex(f=>f.id===editingId);
+    if(idx>=0){
+      funds[idx]={...funds[idx],name,type,sip,invested,cagr,er,risk,riskScore,tag,notes,icon:selectedIcon};
+    }
+  } else {
+    funds.push({
+      id:nextId++,name,type,sip,invested,cagr,er,risk,riskScore,tag,notes,
+      icon:selectedIcon,color:FUND_COLORS[colorIdx],
+      rating:4,worstDrop:-30,recovery:'12 mo'
+    });
+  }
+  saveFunds();
+  closeModal();
+  renderHeader();
+  renderTab();
+}
+
+function deleteFund(id){
+  const f = funds.find(x=>x.id===id);
+  if(!f) return;
+  // Custom confirmation — confirm() blocked in local HTML files on Android
+  document.getElementById('modalTitle').innerHTML = '🗑️ Remove Fund?';
+  document.getElementById('modalBody').innerHTML = `
+    <div style="text-align:center;padding:10px 0">
+      <div style="font-size:28px;margin-bottom:12px">${f.icon}</div>
+      <div style="font-weight:700;font-size:15px;color:#F0EDE8;margin-bottom:6px">${f.name}</div>
+      <div style="font-size:13px;color:rgba(240,237,232,0.45);margin-bottom:24px">This will remove the fund from your portfolio.</div>
+      <div style="display:flex;gap:10px">
+        <button onclick="confirmDelete(${id})" style="flex:1;padding:13px;border:none;border-radius:10px;cursor:pointer;background:linear-gradient(135deg,#B22222,#CC3333);color:#FFF;font-size:15px;font-weight:700;font-family:Georgia,serif">Yes, Remove</button>
+        <button onclick="closeModal()" style="flex:1;padding:13px;border:1px solid rgba(255,255,255,0.15);border-radius:10px;cursor:pointer;background:transparent;color:rgba(240,237,232,0.5);font-size:14px;font-family:Georgia,serif">Cancel</button>
+      </div>
+    </div>`;
+  document.getElementById('modal').style.display='flex';
+}
+
+function confirmDelete(id){
+  funds = funds.filter(f=>f.id!==id);
+  saveFunds();
+  closeModal();
+  renderHeader();
+  renderTab();
+}
+
+// ── EVENT HANDLERS ────────────────────────────────────────────
+function toggleStepUp(){ stepUpOn=!stepUpOn; renderTab(); }
+function updateProjYears(v){ const n=parseInt(v); if(n>0&&n<=40){projYears=n; renderTab();} }
+function updateLumpFund(v){ lumpFund=+v; renderTab(); }
+function updateLumpAmt(v){ const n=parseFloat(v); if(n>0){lumpAmount=n; renderTab();} }
+function updateLumpYears(v){ const n=parseInt(v); if(n>0&&n<=40){lumpYears=n; renderTab();} }
+
+function quickEditSIP(id, val) {
+  const n = parseFloat(val);
+  if(!n || n < 1) return;
+  const idx = funds.findIndex(f => f.id === id);
+  if(idx < 0) return;
+  funds[idx].sip = n;
+  saveFunds();
+  renderHeader();
+  // Only re-render the total row and stats — don't re-render whole tab (keeps focus)
+  // But we do need to update the totals display
+  renderHeader();
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+loadFunds();
+renderHeader();
+renderTab();
+</script>
+<script>
+if('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(() => console.log('SW registered'))
+      .catch(e => console.log('SW error', e));
+  });
+}
+</script>
+</body>
+</html>
