@@ -2,12 +2,12 @@
   "name": "WealthSeed",
   "short_name": "WealthSeed",
   "description": "Your personal SIP & Investment Manager",
-  "start_url": "/index.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0B1520",
   "theme_color": "#0B1520",
   "orientation": "portrait",
-  "scope": "/",
+  "scope": "./",
   "icons": [
     {
       "src": "icon-192.png",
