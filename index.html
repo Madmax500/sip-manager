@@ -924,7 +924,6 @@ function saveAge(){
   if(!n || n < 10 || n > 80){ alert('Please enter a valid age (10–80)'); return; }
   userAge = n;
   saveFunds();
-  document.getElementById('ageDisplay').textContent = userAge;
   closeModal();
   renderTab();
 }
@@ -932,7 +931,6 @@ function saveAge(){
 // ── INIT ──────────────────────────────────────────────────────
 loadFunds();
 document.getElementById('nameDisplay').textContent = userName;
-document.getElementById('ageDisplay').textContent = userAge;
 renderHeader();
 renderTab();
 </script>
