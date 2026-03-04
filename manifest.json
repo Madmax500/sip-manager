@@ -1,7 +1,7 @@
 {
-  "name": "My SIP Manager",
-  "short_name": "SIP Manager",
-  "description": "Personal SIP & Mutual Fund Investment Dashboard",
+  "name": "WealthSeed",
+  "short_name": "WealthSeed",
+  "description": "Your personal SIP & Investment Manager",
   "start_url": "/index.html",
   "display": "standalone",
   "background_color": "#0B1520",
