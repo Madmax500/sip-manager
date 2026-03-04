@@ -70,7 +70,8 @@ body {
 .btn-del { background:rgba(178,34,34,0.2); color:#FF6B6B; }
 .btn-del:hover { background:rgba(178,34,34,0.4); }
 .fc-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:10px; }
-.fc-stat { text-align:center; background:rgba(255,255,255,0.04); border-radius:8px; padding:6px 3px; }
+.fc-stat { text-align:center; background:rgba(255,255,255,0.04); border-radius:8px; padding:6px 3px; transition:background 0.15s; }
+.fc-stat:active { background:rgba(255,255,255,0.1); }
 .fc-stat .sl { font-size:9px; color:rgba(240,237,232,0.33); margin-bottom:2px; }
 .fc-stat .sv { font-size:13px; font-weight:700; }
 .risk-badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:10px; font-weight:700; margin-top:7px; }
@@ -222,9 +223,9 @@ input[type=number] { -moz-appearance:textfield; }
 <body>
 
 <div class="hdr">
-  <div class="hdr-sub">SIP Manager · Upstox · Age 22</div>
-  <div class="hdr-title">My Investment Dashboard</div>
+  <div class="hdr-title" id="nameDisplay" onclick="openNameModal()" style="cursor:pointer">My Investment Dashboard</div>
   <div class="hdr-desc" id="hdrDesc">Loading...</div>
+
 </div>
 
 <div class="stat-strip" id="statStrip"></div>
@@ -276,16 +277,26 @@ let lumpYears = 10;
 let editingId = null;
 let selectedIcon = "📈";
 let nextId = 10;
+let userAge = 22;
+let userName = 'My Investment Dashboard';
 
 // ── STORAGE ───────────────────────────────────────────────────
 function saveFunds() {
-  try { localStorage.setItem('sip_funds', JSON.stringify(funds)); } catch(e){}
+  try {
+    localStorage.setItem('sip_funds', JSON.stringify(funds));
+    localStorage.setItem('sip_age', userAge);
+    localStorage.setItem('sip_name', userName);
+  } catch(e){}
 }
 function loadFunds() {
   try {
     const s = localStorage.getItem('sip_funds');
     if(s) { funds = JSON.parse(s); nextId = Math.max(...funds.map(f=>f.id))+1; }
     else { funds = JSON.parse(JSON.stringify(DEFAULT_FUNDS)); }
+    const a = localStorage.getItem('sip_age');
+    if(a) userAge = parseInt(a);
+    const n = localStorage.getItem('sip_name');
+    if(n) userName = n;
   } catch(e) { funds = JSON.parse(JSON.stringify(DEFAULT_FUNDS)); }
 }
 
@@ -384,10 +395,22 @@ function renderFunds(){
         </div>
       </div>
       <div class="fc-stats">
-        <div class="fc-stat"><div class="sl">SIP/Month</div><div class="sv" style="color:#7EB8F7">₹${f.sip.toLocaleString('en-IN')}</div></div>
-        <div class="fc-stat"><div class="sl">Invested</div><div class="sv" style="color:#4CAF50">₹${(f.invested||0).toLocaleString('en-IN')}</div></div>
-        <div class="fc-stat"><div class="sl">5Y CAGR</div><div class="sv" style="color:#4CAF50">${f.cagr}%</div></div>
-        <div class="fc-stat"><div class="sl">Exp Ratio</div><div class="sv" style="color:${f.er>1?'#FF6B6B':'#4CAF50'}">${f.er}%</div></div>
+        <div class="fc-stat" onclick="quickEdit(${f.id},'sip','SIP / Month','₹',f.sip,'number')" style="cursor:pointer">
+          <div class="sl">SIP/Month ✏️</div>
+          <div class="sv" style="color:#7EB8F7">₹${f.sip.toLocaleString('en-IN')}</div>
+        </div>
+        <div class="fc-stat" onclick="quickEdit(${f.id},'invested','Amount Invested','₹',${f.invested||0},'number')" style="cursor:pointer">
+          <div class="sl">Invested ✏️</div>
+          <div class="sv" style="color:#4CAF50">₹${(f.invested||0).toLocaleString('en-IN')}</div>
+        </div>
+        <div class="fc-stat" onclick="quickEdit(${f.id},'cagr','5Y CAGR','',${f.cagr},'decimal')" style="cursor:pointer">
+          <div class="sl">5Y CAGR ✏️</div>
+          <div class="sv" style="color:#4CAF50">${f.cagr}%</div>
+        </div>
+        <div class="fc-stat" onclick="quickEdit(${f.id},'er','Expense Ratio','',${f.er},'decimal')" style="cursor:pointer">
+          <div class="sl">Exp Ratio ✏️</div>
+          <div class="sv" style="color:${f.er>1?'#FF6B6B':'#4CAF50'}">${f.er}%</div>
+        </div>
       </div>
       <span class="risk-badge" style="background:${rc.bg};color:${rc.txt}">${f.risk} RISK</span>
       <div class="alloc-bar">
@@ -437,7 +460,7 @@ function renderProj(){
 
   const milestones = [3,5,7,8,10,12,15].map(y=>`
     <div class="ms-row ${y===yrs?'hl':''}">
-      <span class="ms-yr">Year ${y} · Age ${22+y}</span>
+      <span class="ms-yr">Year ${y} · Age ${userAge+y}</span>
       <div class="ms-vals">
         <div class="mv"><div class="mv-l">Flat SIP</div><div class="mv-n" style="color:#7EB8F7">${fmt(calcSIP(totalSIP,blendedCAGR,y))}</div></div>
         <div class="mv"><div class="mv-l">Step-Up 10%</div><div class="mv-n" style="color:#4CAF50">${fmt(calcStepUp(totalSIP,blendedCAGR,y))}</div></div>
@@ -448,7 +471,7 @@ function renderProj(){
     const mo=Math.round(totalSIP*Math.pow(1.1,y));
     return `<tr>
       <td style="color:rgba(240,237,232,0.6)">Year ${y+1}</td>
-      <td style="color:#F0EDE8">Age ${23+y}</td>
+      <td style="color:#F0EDE8">Age ${userAge+1+y}</td>
       <td style="color:#7EB8F7">₹${mo.toLocaleString('en-IN')}</td>
       <td style="color:#4CAF50;font-weight:600">${fmt(calcStepUp(totalSIP,blendedCAGR,y+1))}</td>
     </tr>`;
@@ -467,7 +490,7 @@ function renderProj(){
         <div class="input-wrap">
           <span class="input-pre">📅</span>
           <input class="typed-input" type="number" min="1" max="40" value="${yrs}"
-            oninput="updateProjYears(this.value)" placeholder="10">
+            onchange="updateProjYears(this.value)" placeholder="10">
           <span class="input-suf">Years</span>
         </div>
         <div class="ig-hint">Type any number — e.g. 5, 10, 20, 30</div>
@@ -531,7 +554,7 @@ function renderLump(){
         <div class="input-wrap">
           <span class="input-pre">₹</span>
           <input class="typed-input" type="number" min="100" value="${lumpAmount}"
-            oninput="updateLumpAmt(this.value)" placeholder="50000">
+            onchange="updateLumpAmt(this.value)" placeholder="50000">
           <span class="input-suf">.00</span>
         </div>
         <div class="ig-hint">Type any amount — e.g. 10000, 50000, 200000</div>
@@ -541,7 +564,7 @@ function renderLump(){
         <div class="input-wrap">
           <span class="input-pre">📅</span>
           <input class="typed-input" type="number" min="1" max="40" value="${lumpYears}"
-            oninput="updateLumpYears(this.value)" placeholder="10">
+            onchange="updateLumpYears(this.value)" placeholder="10">
           <span class="input-suf">Years</span>
         </div>
         <div class="ig-hint">Type any number from 1 to 40</div>
@@ -797,15 +820,126 @@ function quickEditSIP(id, val) {
   renderHeader();
 }
 
+function quickEdit(id, field, label, prefix, currentVal, type){
+  const f = funds.find(x=>x.id===id);
+  if(!f) return;
+  const suffix = (field==='cagr'||field==='er') ? '%' : '';
+  const inputType = type==='decimal' ? 'number' : 'number';
+  const step = type==='decimal' ? '0.01' : '1';
+  document.getElementById('modalTitle').innerHTML = `✏️ Edit ${label}`;
+  document.getElementById('modalBody').innerHTML = `
+    <div style="padding:8px 0">
+      <div style="font-size:13px;color:rgba(240,237,232,0.4);margin-bottom:4px;text-align:center">${f.icon} ${f.name}</div>
+      <div class="form-group" style="margin-top:14px">
+        <label class="form-label">${label}</label>
+        <div class="input-wrap">
+          ${prefix ? `<span class="input-pre">${prefix}</span>` : `<span class="input-pre">📊</span>`}
+          <input class="typed-input" type="${inputType}" id="qe-input"
+            value="${currentVal}" step="${step}" min="0"
+            onkeydown="if(event.key==='Enter') saveQuickEdit(${id},'${field}','${type}')">
+          ${suffix ? `<span class="input-suf">${suffix}</span>` : ''}
+        </div>
+      </div>
+      <div class="modal-btns" style="margin-top:16px">
+        <button class="btn-save" onclick="saveQuickEdit(${id},'${field}','${type}')">✅ Save</button>
+        <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      </div>
+    </div>`;
+  document.getElementById('modal').style.display='flex';
+  setTimeout(()=>{
+    const inp = document.getElementById('qe-input');
+    if(inp){ inp.focus(); inp.select(); }
+  }, 100);
+}
+
+function saveQuickEdit(id, field, type){
+  const inp = document.getElementById('qe-input');
+  if(!inp) return;
+  const raw = type==='decimal' ? parseFloat(inp.value) : parseFloat(inp.value);
+  if(isNaN(raw) || raw < 0){ alert('Please enter a valid number'); return; }
+  const idx = funds.findIndex(f=>f.id===id);
+  if(idx<0) return;
+  funds[idx][field] = raw;
+  saveFunds();
+  closeModal();
+  renderHeader();
+  renderTab();
+}
+
+function openNameModal(){
+  document.getElementById('modalTitle').textContent = '✏️ Edit Dashboard Name';
+  document.getElementById('modalBody').innerHTML = `
+    <div style="padding:10px 0">
+      <div class="form-group">
+        <label class="form-label">Dashboard Name</label>
+        <div class="input-wrap">
+          <span class="input-pre">📋</span>
+          <input class="typed-input" type="text" id="input-name"
+            value="${userName}" placeholder="e.g. Rahul's Portfolio"
+            style="text-align:left;font-size:15px;font-weight:400;border-left:none;border-right:1px solid rgba(91,155,213,0.3)">
+        </div>
+      </div>
+      <div class="modal-btns">
+        <button class="btn-save" onclick="saveName()">✅ Save</button>
+        <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      </div>
+    </div>`;
+  document.getElementById('modal').style.display='flex';
+  setTimeout(()=>document.getElementById('input-name')?.focus(),100);
+}
+
+function saveName(){
+  const n = document.getElementById('input-name')?.value?.trim();
+  if(!n){ alert('Please enter a name'); return; }
+  userName = n;
+  saveFunds();
+  document.getElementById('nameDisplay').textContent = userName;
+  closeModal();
+}
+
+function openAgeModal(){
+  document.getElementById('modalTitle').textContent = '✏️ Edit Your Age';
+  document.getElementById('modalBody').innerHTML = `
+    <div style="padding:10px 0">
+      <div class="form-group">
+        <label class="form-label">Your Current Age</label>
+        <div class="input-wrap">
+          <span class="input-pre">🎂</span>
+          <input class="typed-input" type="number" id="input-age" min="10" max="80"
+            value="${userAge}" placeholder="e.g. 22">
+          <span class="input-suf">yrs</span>
+        </div>
+      </div>
+      <div class="modal-btns">
+        <button class="btn-save" onclick="saveAge()">✅ Save</button>
+        <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      </div>
+    </div>`;
+  document.getElementById('modal').style.display='flex';
+  setTimeout(()=>document.getElementById('input-age')?.focus(),100);
+}
+
+function saveAge(){
+  const n = parseInt(document.getElementById('input-age')?.value);
+  if(!n || n < 10 || n > 80){ alert('Please enter a valid age (10–80)'); return; }
+  userAge = n;
+  saveFunds();
+  document.getElementById('ageDisplay').textContent = userAge;
+  closeModal();
+  renderTab();
+}
+
 // ── INIT ──────────────────────────────────────────────────────
 loadFunds();
+document.getElementById('nameDisplay').textContent = userName;
+document.getElementById('ageDisplay').textContent = userAge;
 renderHeader();
 renderTab();
 </script>
 <script>
-if('serviceWorker' in navigator) {
+if('serviceWorker' in navigator && location.protocol !== 'file:') {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
+    navigator.serviceWorker.register('sw.js')
       .then(() => console.log('SW registered'))
       .catch(e => console.log('SW error', e));
   });
