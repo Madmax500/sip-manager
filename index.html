@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#0B1520">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SIP Manager">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<title>My SIP Manager</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body {
+  min-height:100vh;
+  background:#0B1520;
+  font-family:Georgia,'Times New Roman',serif;
+  color:#F0EDE8; padding:14px; padding-bottom:50px;
+}
+@keyframes slideUp { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
+ 100%{background-position:200% center} }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+@keyframes pop { 0%{transform:scale(0.92)} 100%{transform:scale(1)} }
+
+/* HEADER */
+.hdr { text-align:center; margin-bottom:20px; animation:slideUp 0.5s ease; }
+.hdr-sub { font-size:10px; letter-spacing:3px; color:#7EB8F7; text-transform:uppercase; margin-bottom:6px; }
+.hdr-title {
+  font-size:clamp(20px,5vw,32px); font-weight:700;
+  color:#FFFFFF; margin-bottom:4px; font-weight:600;
+}
+.hdr-desc { font-size:12px; color:rgba(240,237,232,0.5); }
+
+/* STAT STRIP */
+.stat-strip { display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); gap:8px; margin-bottom:18px; }
+.stat-box { background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.07); border-radius:10px; padding:12px 8px; text-align:center; }
+.stat-box .lbl { font-size:9px; color:rgba(240,237,232,0.4); letter-spacing:1px; text-transform:uppercase; margin-bottom:4px; }
+.stat-box .val { font-size:18px; font-weight:700; color:#7EB8F7; }
+.stat-box .sub { font-size:9px; color:rgba(240,237,232,0.3); margin-top:2px; }
+
+/* TABS */
+.tabs { display:flex; gap:3px; background:rgba(0,0,0,0.35); border-radius:12px; padding:4px; margin-bottom:16px; }
+.tab { flex:1; padding:9px 3px; border-radius:8px; border:none; cursor:pointer; font-size:11px; font-family:Georgia,serif; background:transparent; color:rgba(240,237,232,0.5); transition:all 0.2s; }
+.tab.active { background:rgba(255,255,255,0.12); color:#FFFFFF; font-weight:700; border:1px solid rgba(255,255,255,0.2); }
+
+/* FUND CARD */
+.fund-card {
+  background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.09);
+  border-left:4px solid var(--fc); border-radius:12px; padding:13px 14px;
+  margin-bottom:9px; animation:pop 0.3s ease;
+}
+.fc-top { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+.fc-left { flex:1; min-width:0; }
+.fc-name-row { display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin-bottom:3px; }
+.fc-icon { font-size:18px; }
+.fc-name { font-weight:700; font-size:14px; }
+.fc-type { font-size:10px; color:rgba(240,237,232,0.4); margin-top:1px; }
+.fc-tag { font-size:9px; font-weight:700; letter-spacing:1px; padding:2px 7px; border-radius:20px; white-space:nowrap; }
+.fc-actions { display:flex; gap:6px; flex-shrink:0; }
+.btn-edit, .btn-del {
+  border:none; border-radius:8px; cursor:pointer; font-size:13px;
+  width:32px; height:32px; display:flex; align-items:center; justify-content:center;
+  transition:all 0.15s;
+}
+.btn-edit { background:rgba(255,255,255,0.05); color:#7EB8F7; }
+.btn-edit:hover { background:rgba(91,155,213,0.3); }
+.btn-del { background:rgba(178,34,34,0.2); color:#FF6B6B; }
+.btn-del:hover { background:rgba(178,34,34,0.4); }
+.fc-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:10px; }
+.fc-stat { text-align:center; background:rgba(255,255,255,0.04); border-radius:8px; padding:6px 3px; }
+.fc-stat .sl { font-size:9px; color:rgba(240,237,232,0.33); margin-bottom:2px; }
+.fc-stat .sv { font-size:13px; font-weight:700; }
+.risk-badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:10px; font-weight:700; margin-top:7px; }
+.alloc-bar { margin-top:9px; }
+.alloc-bar-lbl { display:flex; justify-content:space-between; font-size:9px; color:rgba(240,237,232,0.3); margin-bottom:3px; }
+.bar-bg { height:4px; background:rgba(255,255,255,0.08); border-radius:3px; }
+.bar-fill { height:100%; border-radius:3px; }
+
+/* ADD FUND BUTTON */
+.add-btn {
+  width:100%; padding:14px; border-radius:12px; border:2px dashed rgba(91,155,213,0.3);
+  background:rgba(255,255,255,0.04); color:#7EB8F7; cursor:pointer; font-size:14px;
+  font-family:Georgia,serif; font-weight:700; letter-spacing:1px; margin-top:4px;
+  transition:all 0.2s;
+}
+.add-btn:hover { background:rgba(184,134,11,0.12); border-color:rgba(91,155,213,0.5); }
+
+/* TOTAL ROW */
+.total-row { background:linear-gradient(135deg,rgba(91,155,213,0.15),rgba(10,31,61,0.8)); border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:13px 15px; margin-top:6px; }
+.total-row .tl { font-weight:700; font-size:14px; color:#7EB8F7; margin-bottom:8px; }
+.total-stats { display:flex; gap:14px; flex-wrap:wrap; }
+.ts { text-align:center; }
+.ts .tsl { font-size:9px; color:rgba(240,237,232,0.33); margin-bottom:2px; }
+.ts .tsv { font-size:15px; font-weight:700; color:#7EB8F7; }
+
+/* MODAL */
+.modal-overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,0.75);
+  display:flex; align-items:center; justify-content:center;
+  z-index:1000; padding:16px; animation:fadeIn 0.2s ease;
+}
+.modal {
+  background:#111D30;
+  border:1px solid rgba(255,255,255,0.07); border-radius:16px;
+  padding:20px; width:100%; max-width:420px;
+  animation:pop 0.25s ease; max-height:90vh; overflow-y:auto;
+}
+.modal-title { font-size:16px; font-weight:700; color:#7EB8F7; margin-bottom:16px; }
+.modal-close { float:right; background:none; border:none; color:rgba(240,237,232,0.5); font-size:20px; cursor:pointer; margin-top:-4px; }
+
+/* FORM */
+.form-group { margin-bottom:13px; }
+.form-label { font-size:11px; color:rgba(240,237,232,0.5); letter-spacing:0.5px; display:block; margin-bottom:6px; }
+.input-wrap { display:flex; align-items:center; }
+.input-pre {
+  background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.07);
+  border-right:none; border-radius:9px 0 0 9px;
+  padding:11px 12px; font-size:14px; color:#7EB8F7; font-weight:700;
+  font-family:Georgia,serif; white-space:nowrap; color:rgba(255,255,255,0.5);
+}
+.input-suf {
+  background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.07);
+  border-left:none; border-radius:0 9px 9px 0;
+  padding:11px 12px; font-size:12px; color:#7EB8F7; font-weight:700;
+  font-family:Georgia,serif; white-space:nowrap;
+}
+.typed-input, .form-select {
+  flex:1; background:rgba(10,31,61,0.8); color:#F0EDE8;
+  border:1px solid rgba(255,255,255,0.07);
+  border-left:none; border-right:none;
+  padding:11px 10px; font-size:16px; font-weight:700;
+  font-family:Georgia,serif; outline:none; text-align:center; width:100%;
+  -webkit-appearance:none; -moz-appearance:textfield;
+}
+.form-select { border-left:1px solid rgba(91,155,213,0.3); border-right:1px solid rgba(91,155,213,0.3); border-radius:9px; padding:11px 12px; text-align:left; font-size:14px; font-weight:400; }
+.typed-input:focus { background:rgba(10,31,61,0.95); }
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
+input[type=number] { -moz-appearance:textfield; }
+.form-hint { font-size:10px; color:rgba(240,237,232,0.25); margin-top:4px; font-style:italic; }
+.icon-grid { display:grid; grid-template-columns:repeat(8,1fr); gap:6px; margin-top:6px; }
+.icon-opt { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:6px; text-align:center; cursor:pointer; font-size:18px; transition:all 0.15s; }
+.icon-opt.selected, .icon-opt:hover { background:rgba(255,255,255,0.05); border-color:#7EB8F7; }
+.modal-btns { display:flex; gap:10px; margin-top:18px; }
+.btn-save {
+  flex:1; padding:13px; border:none; border-radius:10px; cursor:pointer;
+  background:#2D6BC4; color:#FFFFFF;
+  font-size:15px; font-weight:700; font-family:Georgia,serif;
+}
+.btn-cancel {
+  flex:0.5; padding:13px; border:1px solid rgba(255,255,255,0.15); border-radius:10px;
+  cursor:pointer; background:transparent; color:rgba(240,237,232,0.5);
+  font-size:14px; font-family:Georgia,serif;
+}
+
+/* SECTION CARD */
+.section-card { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.07); border-radius:12px; padding:16px; margin-bottom:12px; }
+.section-title { font-size:13px; font-weight:700; color:#7EB8F7; margin-bottom:12px; }
+
+/* RESULT BOX */
+.result-box { background:linear-gradient(135deg,rgba(26,107,60,0.3),rgba(10,61,61,0.5)); border:1px solid rgba(76,175,80,0.4); border-radius:12px; padding:18px; text-align:center; margin-top:12px; }
+.result-lbl { font-size:10px; color:rgba(240,237,232,0.4); letter-spacing:2px; text-transform:uppercase; margin-bottom:5px; }
+.result-val { font-size:clamp(28px,6vw,42px); font-weight:700; color:#4CAF50; }
+.result-sub { font-size:12px; color:rgba(240,237,232,0.45); margin-top:5px; }
+.result-sub2 { font-size:12px; color:#7EB8F7; margin-top:3px; }
+
+/* INPUT GROUP (projections/lumpsum) */
+.ig { margin-bottom:13px; }
+.ig-label { font-size:11px; color:rgba(240,237,232,0.45); margin-bottom:6px; display:block; letter-spacing:0.5px; }
+.ig-hint { font-size:10px; color:rgba(240,237,232,0.25); margin-top:4px; font-style:italic; }
+
+/* TOGGLE */
+.toggle-btn { padding:9px 18px; border-radius:20px; border:1px solid rgba(255,255,255,0.12); background:rgba(91,155,213,0.1); color:#7EB8F7; cursor:pointer; font-size:12px; font-family:Georgia,serif; transition:all 0.2s; }
+.toggle-btn.off { border-color:rgba(255,255,255,0.15); background:transparent; color:rgba(240,237,232,0.35); }
+
+/* MILESTONE */
+.ms-wrap { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:12px; overflow:hidden; margin-top:10px; }
+.ms-hdr { padding:11px 13px; border-bottom:1px solid rgba(255,255,255,0.08); font-weight:700; color:#7EB8F7; font-size:12px; }
+.ms-row { display:flex; justify-content:space-between; align-items:center; padding:10px 13px; border-bottom:1px solid rgba(255,255,255,0.05); flex-wrap:wrap; gap:5px; }
+.ms-row.hl { background:rgba(91,155,213,0.08); }
+.ms-yr { color:rgba(240,237,232,0.55); font-size:12px; }
+.ms-vals { display:flex; gap:18px; }
+.mv { text-align:right; }
+.mv-l { font-size:9px; color:rgba(240,237,232,0.28); }
+.mv-n { font-size:13px; font-weight:600; }
+
+/* LUMP ITEMS */
+.lump-item { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:11px 13px; margin-bottom:7px; }
+.lump-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:4px; }
+.lump-name { display:flex; align-items:center; gap:6px; font-size:12px; }
+.lump-cagr { font-size:10px; color:rgba(240,237,232,0.33); }
+
+/* RISK */
+.risk-sum { background:linear-gradient(135deg,rgba(20,30,48,0.6),rgba(10,31,61,0.8)); border:1px solid rgba(20,30,48,0.8); border-radius:12px; padding:16px; margin-bottom:10px; }
+.risk-grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-top:8px; }
+.ri { text-align:center; }
+.ri .rv { font-size:20px; font-weight:700; }
+.ri .rl { font-size:11px; color:rgba(240,237,232,0.55); margin-top:2px; }
+.ri .rs { font-size:9px; color:rgba(240,237,232,0.33); }
+.risk-card { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-left:4px solid var(--rc); border-radius:10px; padding:13px; margin-bottom:9px; }
+.rc-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:9px; flex-wrap:wrap; gap:5px; }
+.risk-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; }
+.rst { text-align:center; background:rgba(255,255,255,0.04); border-radius:7px; padding:7px 3px; }
+.rst .rsl { font-size:9px; color:rgba(240,237,232,0.3); margin-bottom:2px; }
+.rst .rsv { font-size:13px; font-weight:700; }
+.insight { background:rgba(91,155,213,0.08); border:1px solid rgba(255,255,255,0.07); border-radius:12px; padding:13px; margin-top:4px; }
+.insight-t { font-weight:700; color:#7EB8F7; margin-bottom:6px; font-size:13px; }
+.insight-b { font-size:12px; color:rgba(240,237,232,0.65); line-height:1.6; }
+
+/* STEPUP TABLE */
+.su-table { width:100%; border-collapse:collapse; font-size:11px; margin-top:8px; }
+.su-table th { background:rgba(20,30,48,0.9); color:#7EB8F7; padding:8px 6px; text-align:center; font-size:10px; }
+.su-table td { padding:8px 6px; text-align:center; border-bottom:1px solid rgba(255,255,255,0.05); }
+.su-table tr:nth-child(even) td { background:rgba(255,255,255,0.03); }
+
+.footer { text-align:center; margin-top:22px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.07); font-size:10px; color:rgba(240,237,232,0.18); line-height:1.6; }
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-sub">SIP Manager · Upstox · Age 22</div>
+  <div class="hdr-title">My Investment Dashboard</div>
+  <div class="hdr-desc" id="hdrDesc">Loading...</div>
+</div>
+
+<div class="stat-strip" id="statStrip"></div>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('funds')">📋 Funds</button>
+  <button class="tab" onclick="switchTab('proj')">📈 Projections</button>
+  <button class="tab" onclick="switchTab('lump')">💰 Lump Sum</button>
+  <button class="tab" onclick="switchTab('risk')">⚠️ Risk</button>
+</div>
+
+<div id="tabContent"></div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal" style="display:none" onclick="closeModalOutside(event)">
+  <div class="modal" id="modalBox">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-title" id="modalTitle">Add Fund</div>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<div class="footer">Educational only · Not SEBI-registered advice · Past performance ≠ future results</div>
+
+<script>
+// ── DEFAULT FUNDS ─────────────────────────────────────────────
+const DEFAULT_FUNDS = [
+  {id:1,name:"Parag Parikh Flexi Cap",type:"Flexi Cap",sip:2100,invested:1000,cagr:18.09,er:0.57,risk:"LOW",riskScore:1,rating:5,color:"#1A6B3C",icon:"🏆",tag:"ANCHOR",worstDrop:-29,recovery:"5 mo",notes:"#1 AUM · LOW risk · Best risk-adjusted fund"},
+  {id:2,name:"MO S&P 500 Index Fund",type:"Global Index",sip:1400,invested:0,cagr:17.49,er:0.50,risk:"LOW-MED",riskScore:2,rating:4,color:"#0A3D3D",icon:"🌐",tag:"US CORE",worstDrop:-24,recovery:"14 mo",notes:"500 US companies · USD hedge · No Nasdaq overlap"},
+  {id:3,name:"HDFC Nifty Midcap 150",type:"Mid Cap Index",sip:1050,invested:0,cagr:21.22,er:0.30,risk:"MED",riskScore:3,rating:4,color:"#5B9BD5",icon:"📈",tag:"GROWTH",worstDrop:-38,recovery:"18 mo",notes:"Replaces Nifty 50 · Nearly 2× CAGR · 0.30% ER"},
+  {id:4,name:"Nippon India Large Cap",type:"Large Cap",sip:700,invested:1000,cagr:17.68,er:1.40,risk:"MED",riskScore:3,rating:5,color:"#5BA85B",icon:"🏢",tag:"INDIA CORE",worstDrop:-35,recovery:"12 mo",notes:"★★★★★ · Monitor high ER (1.40%)"},
+  {id:5,name:"ICICI Pru Gold ETF",type:"Gold ETF",sip:560,invested:1879,cagr:10.0,er:0.50,risk:"LOW",riskScore:1,rating:3,color:"#8B6914",icon:"🥇",tag:"HEDGE ✅",worstDrop:-20,recovery:"36 mo",notes:"Crisis buffer · Rises when equity falls"},
+  {id:6,name:"Bandhan Small Cap",type:"Small Cap",sip:490,invested:1000,cagr:23.53,er:0.90,risk:"HIGH",riskScore:5,rating:5,color:"#B22222",icon:"🚀",tag:"HIGH GROWTH",worstDrop:-55,recovery:"24 mo",notes:"Highest CAGR · Controlled at 7%"},
+];
+
+const ICONS = ["🏆","📈","🌐","🏢","🥇","🚀","💎","⭐","🎯","💼","🔥","📊","💡","🌟","🏦","💹","🛡️","⚡"];
+const RISK_OPTS = ["LOW","LOW-MED","MED","HIGH"];
+const RISK_COLORS = {LOW:{bg:"#EAF7EE",txt:"#1A6B3C"},["LOW-MED"]:{bg:"#EAF7F7",txt:"#0A3D3D"},MED:{bg:"#FFF8EC",txt:"#5BA85B"},HIGH:{bg:"#FDF0F0",txt:"#B22222"}};
+const FUND_COLORS = ["#1A6B3C","#0A3D3D","#5B9BD5","#5BA85B","#8B6914","#B22222","#3D0A5C","#0A3D5C","#5C3D0A","#1A3D6B"];
+
+// ── STATE ─────────────────────────────────────────────────────
+let funds = [];
+let activeTab = 'funds';
+let projYears = 10;
+let stepUpOn = true;
+let lumpFund = 0;
+let lumpAmount = 50000;
+let lumpYears = 10;
+let editingId = null;
+let selectedIcon = "📈";
+let nextId = 10;
+
+// ── STORAGE ───────────────────────────────────────────────────
+function saveFunds() {
+  try { localStorage.setItem('sip_funds', JSON.stringify(funds)); } catch(e){}
+}
+function loadFunds() {
+  try {
+    const s = localStorage.getItem('sip_funds');
+    if(s) { funds = JSON.parse(s); nextId = Math.max(...funds.map(f=>f.id))+1; }
+    else { funds = JSON.parse(JSON.stringify(DEFAULT_FUNDS)); }
+  } catch(e) { funds = JSON.parse(JSON.stringify(DEFAULT_FUNDS)); }
+}
+
+// ── CALC ──────────────────────────────────────────────────────
+function calcSIP(m,cagr,yrs){
+  const r=cagr/100/12,n=yrs*12;
+  return m*((Math.pow(1+r,n)-1)/r)*(1+r);
+}
+function calcStepUp(m,cagr,yrs,su=0.10){
+  let total=0;
+  for(let y=0;y<yrs;y++){
+    const mo=m*Math.pow(1+su,y),r=cagr/100/12;
+    for(let i=0;i<12;i++) total+=mo*Math.pow(1+r,(yrs-y)*12-i);
+  }
+  return total;
+}
+function calcLump(amt,cagr,yrs){ return amt*Math.pow(1+cagr/100,yrs); }
+function fmt(n){
+  if(n>=10000000) return '₹'+(n/10000000).toFixed(2)+' Cr';
+  if(n>=100000) return '₹'+(n/100000).toFixed(1)+'L';
+  return '₹'+Math.round(n).toLocaleString('en-IN');
+}
+function stars(n){ return '★'.repeat(n)+'☆'.repeat(5-n); }
+function getTotals(){
+  const totalSIP = funds.reduce((s,f)=>s+f.sip,0);
+  const blendedCAGR = totalSIP>0 ? funds.reduce((s,f)=>s+(f.cagr*f.sip/totalSIP),0) : 0;
+  const blendedER = totalSIP>0 ? funds.reduce((s,f)=>s+(f.er*f.sip/totalSIP),0) : 0;
+  return {totalSIP,blendedCAGR,blendedER};
+}
+
+// ── RENDER HEADER ─────────────────────────────────────────────
+function renderHeader(){
+  const {totalSIP,blendedCAGR,blendedER} = getTotals();
+  const corpus10 = calcStepUp(totalSIP,blendedCAGR,10);
+  const totalInvested = funds.reduce((s,f)=>s+(f.invested||0),0);
+  document.getElementById('hdrDesc').textContent =
+    `₹${totalSIP.toLocaleString('en-IN')}/month · ${funds.length} Funds · ${blendedCAGR.toFixed(1)}% Blended CAGR`;
+  document.getElementById('statStrip').innerHTML = [
+    {lbl:'Monthly SIP',val:'₹'+totalSIP.toLocaleString('en-IN'),sub:funds.length+' funds'},
+    {lbl:'Total Invested',val:'₹'+totalInvested.toLocaleString('en-IN'),sub:'current value'},
+    {lbl:'Blended CAGR',val:blendedCAGR.toFixed(1)+'%',sub:'weighted avg'},
+    {lbl:'Blended ER',val:blendedER.toFixed(2)+'%',sub:'expense ratio'},
+    {lbl:'10-Yr (Step-Up)',val:fmt(corpus10),sub:'10% annual'},
+  ].map(s=>`<div class="stat-box"><div class="lbl">${s.lbl}</div><div class="val">${s.val}</div><div class="sub">${s.sub}</div></div>`).join('');
+}
+
+// ── TABS ──────────────────────────────────────────────────────
+function switchTab(tab){
+  activeTab=tab;
+  document.querySelectorAll('.tab').forEach((t,i)=>{
+    t.classList.toggle('active',['funds','proj','lump','risk'][i]===tab);
+  });
+  renderTab();
+}
+function renderTab(){
+  const el=document.getElementById('tabContent');
+  if(activeTab==='funds') el.innerHTML=renderFunds();
+  else if(activeTab==='proj') el.innerHTML=renderProj();
+  else if(activeTab==='lump') el.innerHTML=renderLump();
+  else el.innerHTML=renderRisk();
+}
+
+// ── FUNDS TAB ─────────────────────────────────────────────────
+function renderFunds(){
+  const {totalSIP,blendedCAGR} = getTotals();
+  if(funds.length===0){
+    return `<div class="section-card" style="text-align:center;padding:40px 20px">
+      <div style="font-size:40px;margin-bottom:12px">📭</div>
+      <div style="color:rgba(240,237,232,0.5);margin-bottom:4px">No funds yet</div>
+      <div style="font-size:12px;color:rgba(240,237,232,0.3)">Tap the button below to add your first fund</div>
+    </div>
+    <button class="add-btn" onclick="openAddModal()">＋ ADD FUND</button>`;
+  }
+  const maxSIP = Math.max(...funds.map(f=>calcSIP(f.sip,f.cagr,10)));
+  let html = funds.map(f=>{
+    const rc=RISK_COLORS[f.risk]||RISK_COLORS.MED;
+    const val10=calcSIP(f.sip,f.cagr,10);
+    const allocPct = totalSIP>0 ? (f.sip/totalSIP*100).toFixed(1) : 0;
+    return `<div class="fund-card" style="--fc:${f.color}">
+      <div class="fc-top">
+        <div class="fc-left">
+          <div class="fc-name-row">
+            <span class="fc-icon">${f.icon}</span>
+            <div>
+              <div class="fc-name">${f.name}</div>
+              <div class="fc-type">${f.type}</div>
+            </div>
+            <span class="fc-tag" style="background:${f.color}22;color:${f.color};border:1px solid ${f.color}44">${f.tag}</span>
+          </div>
+          ${f.notes?`<div style="font-size:11px;color:rgba(240,237,232,0.38);margin-top:3px;font-style:italic">${f.notes}</div>`:''}
+          <div style="color:#7EB8F7;font-size:11px;margin-top:4px">${stars(f.rating||3)}</div>
+        </div>
+        <div class="fc-actions">
+          <button class="btn-edit" onclick="openEditModal(${f.id})" title="Edit">✏️</button>
+          <button class="btn-del" onclick="deleteFund(${f.id})" title="Remove">🗑️</button>
+        </div>
+      </div>
+      <div class="fc-stats">
+        <div class="fc-stat"><div class="sl">SIP/Month</div><div class="sv" style="color:#7EB8F7">₹${f.sip.toLocaleString('en-IN')}</div></div>
+        <div class="fc-stat"><div class="sl">Invested</div><div class="sv" style="color:#4CAF50">₹${(f.invested||0).toLocaleString('en-IN')}</div></div>
+        <div class="fc-stat"><div class="sl">5Y CAGR</div><div class="sv" style="color:#4CAF50">${f.cagr}%</div></div>
+        <div class="fc-stat"><div class="sl">Exp Ratio</div><div class="sv" style="color:${f.er>1?'#FF6B6B':'#4CAF50'}">${f.er}%</div></div>
+      </div>
+      <span class="risk-badge" style="background:${rc.bg};color:${rc.txt}">${f.risk} RISK</span>
+      <div class="alloc-bar">
+        <div class="alloc-bar-lbl"><span>Weight ${allocPct}%</span><span>10yr: ${fmt(val10)}</span></div>
+        <div class="bar-bg"><div class="bar-fill" style="width:${allocPct}%;background:linear-gradient(90deg,${f.color},${f.color}88)"></div></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const totalInvested = funds.reduce((s,f)=>s+(f.invested||0),0);
+  const corpus10 = calcStepUp(totalSIP,blendedCAGR,10);
+  html += `<div class="total-row">
+    <div class="tl">TOTAL PORTFOLIO</div>
+    <div class="total-stats">
+      <div class="ts"><div class="tsl">Monthly SIP</div><div class="tsv">₹${totalSIP.toLocaleString('en-IN')}</div></div>
+      <div class="ts"><div class="tsl">Total Invested</div><div class="tsv">₹${totalInvested.toLocaleString('en-IN')}</div></div>
+      <div class="ts"><div class="tsl">Blended CAGR</div><div class="tsv">${blendedCAGR.toFixed(1)}%</div></div>
+      <div class="ts"><div class="tsl">10-Yr Corpus</div><div class="tsv">${fmt(calcSIP(totalSIP,blendedCAGR,10))}</div></div>
+      <div class="ts"><div class="tsl">With Step-Up</div><div class="tsv">${fmt(corpus10)}</div></div>
+    </div>
+  </div>`;
+
+  html += `<button class="add-btn" onclick="openAddModal()" style="margin-top:10px">＋ ADD NEW FUND</button>`;
+  return html;
+}
+
+// ── PROJECTIONS TAB ───────────────────────────────────────────
+function renderProj(){
+  const {totalSIP,blendedCAGR} = getTotals();
+  const yrs = projYears||10;
+  const corpus = stepUpOn ? calcStepUp(totalSIP,blendedCAGR,yrs) : calcSIP(totalSIP,blendedCAGR,yrs);
+  const invested = stepUpOn
+    ? Array.from({length:yrs},(_,y)=>totalSIP*Math.pow(1.1,y)*12).reduce((a,b)=>a+b,0)
+    : totalSIP*12*yrs;
+  const maxFundVal = Math.max(...funds.map(f=>calcSIP(f.sip,f.cagr,yrs)||0),1);
+
+  const fundBars = funds.map(f=>{
+    const v=calcSIP(f.sip,f.cagr,yrs);
+    return `<div class="lump-item">
+      <div class="lump-top">
+        <div class="lump-name">${f.icon} <span>${f.name}</span> <span class="lump-cagr">₹${f.sip}/mo @ ${f.cagr}%</span></div>
+        <span style="font-size:14px;font-weight:700;color:#4CAF50">${fmt(v)}</span>
+      </div>
+      <div class="bar-bg"><div class="bar-fill" style="width:${(v/maxFundVal*100).toFixed(1)}%;background:linear-gradient(90deg,${f.color},${f.color}88)"></div></div>
+    </div>`;
+  }).join('');
+
+  const milestones = [3,5,7,8,10,12,15].map(y=>`
+    <div class="ms-row ${y===yrs?'hl':''}">
+      <span class="ms-yr">Year ${y} · Age ${22+y}</span>
+      <div class="ms-vals">
+        <div class="mv"><div class="mv-l">Flat SIP</div><div class="mv-n" style="color:#7EB8F7">${fmt(calcSIP(totalSIP,blendedCAGR,y))}</div></div>
+        <div class="mv"><div class="mv-l">Step-Up 10%</div><div class="mv-n" style="color:#4CAF50">${fmt(calcStepUp(totalSIP,blendedCAGR,y))}</div></div>
+      </div>
+    </div>`).join('');
+
+  const stepRows = Array.from({length:Math.min(yrs,12)},(_,y)=>{
+    const mo=Math.round(totalSIP*Math.pow(1.1,y));
+    return `<tr>
+      <td style="color:rgba(240,237,232,0.6)">Year ${y+1}</td>
+      <td style="color:#F0EDE8">Age ${23+y}</td>
+      <td style="color:#7EB8F7">₹${mo.toLocaleString('en-IN')}</td>
+      <td style="color:#4CAF50;font-weight:600">${fmt(calcStepUp(totalSIP,blendedCAGR,y+1))}</td>
+    </tr>`;
+  }).join('');
+
+  return `
+    <div class="section-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <div class="section-title" style="margin:0">Projection Settings</div>
+        <button class="toggle-btn ${stepUpOn?'':'off'}" onclick="toggleStepUp()">
+          ${stepUpOn?'✓ 10% Step-Up':'Step-Up OFF'}
+        </button>
+      </div>
+      <div class="ig">
+        <label class="ig-label">Number of years to project</label>
+        <div class="input-wrap">
+          <span class="input-pre">📅</span>
+          <input class="typed-input" type="number" min="1" max="40" value="${yrs}"
+            oninput="updateProjYears(this.value)" placeholder="10">
+          <span class="input-suf">Years</span>
+        </div>
+        <div class="ig-hint">Type any number — e.g. 5, 10, 20, 30</div>
+      </div>
+    </div>
+
+    <div class="result-box" style="margin-bottom:12px">
+      <div class="result-lbl">Projected Corpus in ${yrs} Years</div>
+      <div class="result-val">${fmt(corpus)}</div>
+      <div class="result-sub">Total invested: ${fmt(invested)} → Gains: ${fmt(Math.max(corpus-invested,0))}</div>
+      <div class="result-sub2" style="color:#7EB8F7">${stepUpOn?'With 10% annual step-up':'Flat SIP, no step-up'}</div>
+    </div>
+
+    <div style="font-size:12px;color:rgba(240,237,232,0.45);margin-bottom:7px">Each fund's value in ${yrs} years:</div>
+    ${fundBars}
+
+    <div class="ms-wrap">
+      <div class="ms-hdr">Year-by-Year Milestones</div>
+      ${milestones}
+    </div>
+
+    <div class="section-card" style="margin-top:10px;padding:14px">
+      <div class="section-title">📅 Step-Up Schedule (10% every April)</div>
+      <table class="su-table">
+        <thead><tr><th>Year</th><th>Age</th><th>SIP/Month</th><th>Corpus</th></tr></thead>
+        <tbody>${stepRows}</tbody>
+      </table>
+    </div>`;
+}
+
+// ── LUMP SUM TAB ──────────────────────────────────────────────
+function renderLump(){
+  const fund = funds[lumpFund] || funds[0];
+  if(!fund) return `<div class="section-card" style="text-align:center;padding:30px"><div style="color:rgba(240,237,232,0.4)">Add funds first to use Lump Sum calculator</div></div>`;
+
+  const result = calcLump(lumpAmount,fund.cagr,lumpYears);
+  const sorted = [...funds].sort((a,b)=>b.cagr-a.cagr);
+  const best = calcLump(lumpAmount,sorted[0]?.cagr||10,lumpYears);
+
+  const fundOpts = funds.map((f,i)=>`<option value="${i}" ${i===lumpFund?'selected':''}>${f.icon} ${f.name} — ${f.cagr}% CAGR</option>`).join('');
+  const compare = sorted.map(f=>{
+    const v=calcLump(lumpAmount,f.cagr,lumpYears);
+    return `<div class="lump-item">
+      <div class="lump-top">
+        <div class="lump-name">${f.icon} <span>${f.name}</span> <span class="lump-cagr">${f.cagr}%</span></div>
+        <span style="font-size:14px;font-weight:700;color:#4CAF50">${fmt(v)}</span>
+      </div>
+      <div class="bar-bg"><div class="bar-fill" style="width:${(v/best*100).toFixed(1)}%;background:linear-gradient(90deg,${f.color},${f.color}88)"></div></div>
+    </div>`;
+  }).join('');
+
+  return `
+    <div class="section-card">
+      <div class="section-title">💰 Lump Sum Calculator</div>
+      <div class="ig">
+        <label class="ig-label">Select Fund</label>
+        <select style="width:100%;background:rgba(10,31,61,0.8);color:#F0EDE8;border:1px solid rgba(255,255,255,0.07);border-radius:9px;padding:11px 12px;font-size:13px;cursor:pointer;outline:none;font-family:Georgia,serif" onchange="updateLumpFund(this.value)">${fundOpts}</select>
+      </div>
+      <div class="ig">
+        <label class="ig-label">Amount to Invest (₹)</label>
+        <div class="input-wrap">
+          <span class="input-pre">₹</span>
+          <input class="typed-input" type="number" min="100" value="${lumpAmount}"
+            oninput="updateLumpAmt(this.value)" placeholder="50000">
+          <span class="input-suf">.00</span>
+        </div>
+        <div class="ig-hint">Type any amount — e.g. 10000, 50000, 200000</div>
+      </div>
+      <div class="ig">
+        <label class="ig-label">Years to Hold</label>
+        <div class="input-wrap">
+          <span class="input-pre">📅</span>
+          <input class="typed-input" type="number" min="1" max="40" value="${lumpYears}"
+            oninput="updateLumpYears(this.value)" placeholder="10">
+          <span class="input-suf">Years</span>
+        </div>
+        <div class="ig-hint">Type any number from 1 to 40</div>
+      </div>
+      <div class="result-box">
+        <div class="result-lbl">Projected Value</div>
+        <div class="result-val">${fmt(result)}</div>
+        <div class="result-sub">₹${lumpAmount.toLocaleString('en-IN')} grows ${(result/lumpAmount).toFixed(1)}× in ${lumpYears} years</div>
+        <div class="result-sub2" style="color:#7EB8F7">Gain: ${fmt(result-lumpAmount)} · ${fund.name}</div>
+      </div>
+    </div>
+    <div style="font-size:12px;color:rgba(240,237,232,0.4);margin-bottom:7px">Same ₹${lumpAmount.toLocaleString('en-IN')} across all funds for ${lumpYears} years:</div>
+    ${compare}`;
+}
+
+// ── RISK TAB ──────────────────────────────────────────────────
+function renderRisk(){
+  const {totalSIP} = getTotals();
+  const stable = funds.filter(f=>f.risk==='LOW'||f.risk==='LOW-MED').reduce((s,f)=>s+f.sip,0);
+  const growth = funds.filter(f=>f.risk==='MED').reduce((s,f)=>s+f.sip,0);
+  const high = funds.filter(f=>f.risk==='HIGH').reduce((s,f)=>s+f.sip,0);
+  const sp = totalSIP>0;
+
+  const cards = funds.map(f=>{
+    const rc=RISK_COLORS[f.risk]||RISK_COLORS.MED;
+    const impact=(Math.abs(f.worstDrop||0)*f.sip/(totalSIP||1)).toFixed(1);
+    const rw=(f.riskScore||3)/5*100;
+    const rcol=f.riskScore<=2?'#1A6B3C':f.riskScore===3?'#5B9BD5':'#B22222';
+    return `<div class="risk-card" style="--rc:${f.color}">
+      <div class="rc-top">
+        <div style="display:flex;align-items:center;gap:7px">
+          <span style="font-size:17px">${f.icon}</span>
+          <span style="font-weight:700;font-size:13px">${f.name}</span>
+        </div>
+        <span class="risk-badge" style="background:${rc.bg};color:${rc.txt}">${f.risk}</span>
+      </div>
+      <div class="risk-stats">
+        <div class="rst"><div class="rsl">Allocation</div><div class="rsv" style="color:#7EB8F7">${sp?(f.sip/totalSIP*100).toFixed(0):0}%</div></div>
+        <div class="rst"><div class="rsl">5Y CAGR</div><div class="rsv" style="color:#4CAF50">${f.cagr}%</div></div>
+        <div class="rst"><div class="rsl">Exp Ratio</div><div class="rsv" style="color:${f.er>1?'#FF6B6B':'#4CAF50'}">${f.er}%</div></div>
+        <div class="rst"><div class="rsl">Worst Drop</div><div class="rsv" style="color:#FF6B6B">${f.worstDrop||0}%</div></div>
+        <div class="rst"><div class="rsl">Recovery</div><div class="rsv" style="color:#7EB8F7;font-size:11px">${f.recovery||'—'}</div></div>
+        <div class="rst"><div class="rsl">Portfolio Hit</div><div class="rsv" style="color:rgba(240,237,232,0.7)">${impact}%</div></div>
+      </div>
+      <div style="margin-top:9px">
+        <div style="font-size:9px;color:rgba(240,237,232,0.28);margin-bottom:3px">Risk Level</div>
+        <div class="bar-bg"><div class="bar-fill" style="width:${rw}%;background:${rcol}"></div></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `
+    <div class="risk-sum">
+      <div class="section-title" style="margin-bottom:4px">Portfolio Risk Composition</div>
+      <div class="risk-grid3">
+        <div class="ri"><div class="rv" style="color:#1A6B3C">${sp?(stable/totalSIP*100).toFixed(0):0}%</div><div class="rl">Stable Core</div><div class="rs">LOW + LOW-MED</div></div>
+        <div class="ri"><div class="rv" style="color:#7EB8F7">${sp?(growth/totalSIP*100).toFixed(0):0}%</div><div class="rl">Growth</div><div class="rs">MED risk funds</div></div>
+        <div class="ri"><div class="rv" style="color:#B22222">${sp?(high/totalSIP*100).toFixed(0):0}%</div><div class="rl">High Growth</div><div class="rs">HIGH risk funds</div></div>
+      </div>
+    </div>
+    ${cards}
+    <div class="insight">
+      <div class="insight-t" style="color:#7EB8F7">⚡ Key Risk Insight</div>
+      <div class="insight-b">Your 50% stable core (Parag Parikh + S&P 500) absorbs market crashes. Even if your small cap falls 55%, it only hits your portfolio by ~3.85% (7% × 55%). Gold rises during crashes, offsetting more. Real worst-case drop: ~18–22%.</div>
+    </div>`;
+}
+
+// ── MODAL: ADD / EDIT ─────────────────────────────────────────
+function openAddModal(){
+  editingId=null; selectedIcon='📈';
+  document.getElementById('modalTitle').textContent='Add New Fund';
+  document.getElementById('modalBody').innerHTML=fundForm(null);
+  document.getElementById('modal').style.display='flex';
+}
+function openEditModal(id){
+  editingId=id;
+  const f=funds.find(x=>x.id===id);
+  if(!f) return;
+  selectedIcon=f.icon;
+  document.getElementById('modalTitle').textContent='Edit Fund';
+  document.getElementById('modalBody').innerHTML=fundForm(f);
+  document.getElementById('modal').style.display='flex';
+}
+function closeModal(){ document.getElementById('modal').style.display='none'; }
+function closeModalOutside(e){ if(e.target.id==='modal') closeModal(); }
+
+function fundForm(f){
+  const iconGrid = ICONS.map(ic=>`<div class="icon-opt ${ic===selectedIcon?'selected':''}" onclick="selectIcon('${ic}')" id="ico_${ic}">${ic}</div>`).join('');
+  const riskSel = RISK_OPTS.map(r=>`<option value="${r}" ${f&&f.risk===r?'selected':''}>${r}</option>`).join('');
+  return `
+    <div class="form-group">
+      <label class="form-label">Fund / Stock Name</label>
+      <div class="input-wrap">
+        <span class="input-pre">📌</span>
+        <input class="typed-input" type="text" id="f_name" placeholder="e.g. Axis Bluechip Fund" value="${f?f.name:''}" style="text-align:left;font-size:14px;font-weight:400;border-left:none;border-right:1px solid rgba(91,155,213,0.3)">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Type / Category</label>
+      <div class="input-wrap">
+        <span class="input-pre">🏷️</span>
+        <input class="typed-input" type="text" id="f_type" placeholder="e.g. Large Cap, ETF, Stock" value="${f?f.type:''}" style="text-align:left;font-size:14px;font-weight:400;border-left:none;border-right:1px solid rgba(91,155,213,0.3)">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Monthly SIP Amount (₹)</label>
+      <div class="input-wrap">
+        <span class="input-pre">₹</span>
+        <input class="typed-input" type="number" id="f_sip" min="100" placeholder="e.g. 2000" value="${f?f.sip:''}">
+        <span class="input-suf">/mo</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Amount Already Invested (₹)</label>
+      <div class="input-wrap">
+        <span class="input-pre">💰</span>
+        <input class="typed-input" type="number" id="f_invested" min="0" placeholder="e.g. 5000" value="${f?(f.invested||0):'0'}">
+        <span class="input-suf">₹</span>
+      </div>
+      <div class="form-hint">Total amount already put in — leave 0 if just starting</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Expected CAGR (%)</label>
+      <div class="input-wrap">
+        <span class="input-pre">📊</span>
+        <input class="typed-input" type="number" id="f_cagr" min="1" max="50" step="0.01" placeholder="e.g. 18.09" value="${f?f.cagr:''}">
+        <span class="input-suf">%</span>
+      </div>
+      <div class="form-hint">Use actual 5Y CAGR from Upstox</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Expense Ratio (%)</label>
+      <div class="input-wrap">
+        <span class="input-pre">💸</span>
+        <input class="typed-input" type="number" id="f_er" min="0" max="5" step="0.01" placeholder="e.g. 0.57" value="${f?f.er:''}">
+        <span class="input-suf">%</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Risk Level</label>
+      <select class="form-select" id="f_risk">${riskSel}</select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Short Label / Tag</label>
+      <div class="input-wrap">
+        <span class="input-pre">🏷️</span>
+        <input class="typed-input" type="text" id="f_tag" placeholder="e.g. ANCHOR, GROWTH" value="${f?f.tag:''}" maxlength="12" style="text-align:left;font-size:14px;font-weight:400;border-left:none;border-right:1px solid rgba(91,155,213,0.3)">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Notes (optional)</label>
+      <div class="input-wrap">
+        <span class="input-pre">📝</span>
+        <input class="typed-input" type="text" id="f_notes" placeholder="e.g. Top-rated, low risk" value="${f?f.notes:''}" style="text-align:left;font-size:13px;font-weight:400;border-left:none;border-right:1px solid rgba(91,155,213,0.3)">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Choose Icon</label>
+      <div class="icon-grid">${iconGrid}</div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-save" onclick="saveFund()">💾 Save Fund</button>
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+    </div>`;
+}
+
+function selectIcon(ic){
+  selectedIcon=ic;
+  document.querySelectorAll('.icon-opt').forEach(el=>el.classList.remove('selected'));
+  const el=document.getElementById('ico_'+ic);
+  if(el) el.classList.add('selected');
+}
+
+function saveFund(){
+  const name=document.getElementById('f_name')?.value?.trim();
+  const type=document.getElementById('f_type')?.value?.trim()||'Fund';
+  const sip=parseFloat(document.getElementById('f_sip')?.value);
+  const invested=parseFloat(document.getElementById('f_invested')?.value)||0;
+  const cagr=parseFloat(document.getElementById('f_cagr')?.value);
+  const er=parseFloat(document.getElementById('f_er')?.value)||0;
+  const risk=document.getElementById('f_risk')?.value||'MED';
+  const tag=document.getElementById('f_tag')?.value?.trim()||'FUND';
+  const notes=document.getElementById('f_notes')?.value?.trim()||'';
+
+  if(!name){alert('Please enter fund name'); return;}
+  if(!sip||sip<1){alert('Please enter a valid SIP amount'); return;}
+  if(!cagr||cagr<0){alert('Please enter a valid CAGR'); return;}
+
+  const riskScore={LOW:1,"LOW-MED":2,MED:3,HIGH:5}[risk]||3;
+  const colorIdx = funds.length % FUND_COLORS.length;
+
+  if(editingId){
+    const idx=funds.findIndex(f=>f.id===editingId);
+    if(idx>=0){
+      funds[idx]={...funds[idx],name,type,sip,invested,cagr,er,risk,riskScore,tag,notes,icon:selectedIcon};
+    }
+  } else {
+    funds.push({
+      id:nextId++,name,type,sip,invested,cagr,er,risk,riskScore,tag,notes,
+      icon:selectedIcon,color:FUND_COLORS[colorIdx],
+      rating:4,worstDrop:-30,recovery:'12 mo'
+    });
+  }
+  saveFunds();
+  closeModal();
+  renderHeader();
+  renderTab();
+}
+
+function deleteFund(id){
+  const f = funds.find(x=>x.id===id);
+  if(!f) return;
+  // Custom confirmation — confirm() blocked in local HTML files on Android
+  document.getElementById('modalTitle').innerHTML = '🗑️ Remove Fund?';
+  document.getElementById('modalBody').innerHTML = `
+    <div style="text-align:center;padding:10px 0">
+      <div style="font-size:28px;margin-bottom:12px">${f.icon}</div>
+      <div style="font-weight:700;font-size:15px;color:#F0EDE8;margin-bottom:6px">${f.name}</div>
+      <div style="font-size:13px;color:rgba(240,237,232,0.45);margin-bottom:24px">This will remove the fund from your portfolio.</div>
+      <div style="display:flex;gap:10px">
+        <button onclick="confirmDelete(${id})" style="flex:1;padding:13px;border:none;border-radius:10px;cursor:pointer;background:linear-gradient(135deg,#B22222,#CC3333);color:#FFF;font-size:15px;font-weight:700;font-family:Georgia,serif">Yes, Remove</button>
+        <button onclick="closeModal()" style="flex:1;padding:13px;border:1px solid rgba(255,255,255,0.15);border-radius:10px;cursor:pointer;background:transparent;color:rgba(240,237,232,0.5);font-size:14px;font-family:Georgia,serif">Cancel</button>
+      </div>
+    </div>`;
+  document.getElementById('modal').style.display='flex';
+}
+
+function confirmDelete(id){
+  funds = funds.filter(f=>f.id!==id);
+  saveFunds();
+  closeModal();
+  renderHeader();
+  renderTab();
+}
+
+// ── EVENT HANDLERS ────────────────────────────────────────────
+function toggleStepUp(){ stepUpOn=!stepUpOn; renderTab(); }
+function updateProjYears(v){ const n=parseInt(v); if(n>0&&n<=40){projYears=n; renderTab();} }
+function updateLumpFund(v){ lumpFund=+v; renderTab(); }
+function updateLumpAmt(v){ const n=parseFloat(v); if(n>0){lumpAmount=n; renderTab();} }
+function updateLumpYears(v){ const n=parseInt(v); if(n>0&&n<=40){lumpYears=n; renderTab();} }
+
+function quickEditSIP(id, val) {
+  const n = parseFloat(val);
+  if(!n || n < 1) return;
+  const idx = funds.findIndex(f => f.id === id);
+  if(idx < 0) return;
+  funds[idx].sip = n;
+  saveFunds();
+  renderHeader();
+  // Only re-render the total row and stats — don't re-render whole tab (keeps focus)
+  // But we do need to update the totals display
+  renderHeader();
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+loadFunds();
+renderHeader();
+renderTab();
+</script>
+<script>
+if('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(() => console.log('SW registered'))
+      .catch(e => console.log('SW error', e));
+  });
+}
+</script>
+</body>
+</html>
